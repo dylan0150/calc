@@ -1,6 +1,6 @@
 var app = angular.module('app',[])
 
-app.controller('mainCtrl', function($scope, $http){
+app.controller('mainCtrl', function($scope, $http, $filter){
 
   var host = 'http://localhost:8080'
 
@@ -15,7 +15,7 @@ app.controller('mainCtrl', function($scope, $http){
       }
     } else {
       for (var key in obj) {
-        if (key == 'date' || key == 'next_date' || key == 'completion_date') {
+        if (key == 'date' || key == 'next_date' || key == 'completion_date' || key == 'from') {
           obj[key] = new Date(obj[key])
         } else if (typeof obj[key] == 'object') {
           parseDates(obj[key])
@@ -90,6 +90,28 @@ app.controller('mainCtrl', function($scope, $http){
       }
     }).then(load).then(function(response){
       $scope.form_loading = false
+    })
+  }
+
+  $scope.print = function() {
+    $scope.form_loading = true
+    $http({
+      method:'get',
+      url:host+'/print'
+    }).then(function(response){
+      parseDates(response.data)
+      $scope.print_table = response.data
+      var balance = 0
+      for (var i = 0; i < $scope.print_table.length; i++) {
+        var row = $scope.print_table[i]
+        row.balance = balance += row.amount
+        if (row.from != undefined) {
+          row.desc = "Interest charges from "+$filter('date')(row.from)+" to "+$filter('date')(row.date)+" @"+row.rate+"%"
+        }
+      }
+    }).then(load).then(function(response) {
+      $scope.form_loading = false
+      $scope.view = 'print'
     })
   }
 })

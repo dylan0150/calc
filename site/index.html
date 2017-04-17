@@ -24,7 +24,7 @@
           <button ng-click="view ='info'">Info</button>
           <button ng-click="view ='payment'">New Payment</button>
           <button ng-click="view ='interest'">Change Interest</button>
-          <button ng-click="view ='print'">Print Spreadsheet</button>
+          <button ng-click="print()">Print Spreadsheet</button>
           <button ng-click="view ='charge'">Add a Charge</button>
         </div>
 
@@ -117,7 +117,26 @@
           </table>
         </div>
         <div ng-show="view == 'print'" class="view print">
-
+          <table>
+            <thead>
+              <th>-</th>
+              <th>Type</th>
+              <th>Description</th>
+              <th>Date(s)</th>
+              <th>Balance Change</th>
+              <th>New Balance</th>
+            </thead>
+            <tbody>
+              <tr ng-repeat="row in print_table">
+                <td>{{ $index+1 }}</td>
+                <td>{{ row.type }}</td>
+                <td>{{ row.desc }}</td>
+                <td>{{ row.date | date }}</td>
+                <td>£ {{ row.amount | number : 2 }}</td>
+                <td>£ {{ row.balance | number : 2 }}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
