@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="style.css">
+    <script src="lib/angular.min.js" charset="utf-8"></script>
+    <script src="script.js" charset="utf-8"></script>
+    <title>Date Calculator</title>
+  </head>
+  <body ng-app="app">
+    <div class="main" ng-controller="mainCtrl">
+
+      <div ng-show="loading" class="loader">
+        <p>Loading Please Wait...</p>
+      </div>
+
+      <div ng-show="!loading" class="content">
+
+        <div class="form-loader" ng-show="form_loading">
+          <p>Loading please wait...</p>
+        </div>
+
+        <div class="controls">
+          <button ng-click="view ='info'">Info</button>
+          <button ng-click="view ='payment'">New Payment</button>
+          <button ng-click="view ='interest'">Change Interest</button>
+          <button ng-click="view ='print'">Print Spreadsheet</button>
+          <button ng-click="view ='charge'">Add a Charge</button>
+        </div>
+
+        <div ng-show="view == 'info'" class="view info">
+          <p>The next payment is due on {{ info.next_date | date }} for an amount of £{{info.next_amount | number : 2}}</p>
+          <p>The total amount remaining to pay off is £{{info.current_total | number : 2}}</p>
+          <p>This results in a total payable amount of £{{info.abs_total | number : 2}} assuming a completion date of {{info.completion_date | date}} and a total interest of £{{ info.total_interest | number : 2 }}.</p>
+        </div>
+
+        <div ng-show="view == 'charge'" class="view charge">
+          <form name="charge_form" ng-submit="charge()">
+            <label for="reason">Reason</label>
+            <input type="text" name="reason" ng-model="reason">
+            <label for="amount">Amount</label>
+            <input type="number" min="0.01" value="0.00" step="0.01" required name="amount" ng-model="amount">
+            <label for="date">Date</label>
+            <input type="date" required name="date" ng-model="date">
+            <input type="submit" value="Submit" ng-disabled="form_loading">
+          </form>
+          <table width="100%">
+            <thead>
+              <th>-</th>
+              <th>Reason</th>
+              <th>Date</th>
+              <th>Interest Rate</th>
+              <th>Amount</th>
+            </thead>
+            <tbody>
+              <tr ng-repeat="charge in charges | orderBy : date : false">
+                <td>{{ $index+1 }}</td>
+                <td>{{ charge.reason }}</td>
+                <td>{{ charge.date | date }}</td>
+                <td>{{ charge.rate | number : 2}}%</td>
+                <td>£ {{ charge.amount | number:2 }}</td>
+                <td><button ng-click="delete(charge,charges)">X</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div ng-show="view == 'payment'" class="view payment">
+          <form name="payment_form" ng-submit="payment()">
+            <label for="amount">Amount</label>
+            <input type="number" min="0.01" value="0.00" step="0.01" required name="amount" ng-model="amount">
+            <label for="date">Date</label>
+            <input type="date" required name="date" ng-model="date">
+            <input type="submit" value="Submit" ng-disabled="form_loading">
+          </form>
+          <table width="100%">
+            <thead>
+              <th>-</th>
+              <th>Date</th>
+              <th>Amount</th>
+              <th></th>
+            </thead>
+            <tbody>
+              <tr ng-repeat="payment in payments">
+                <td>{{ $index+1 }}</td>
+                <td>{{ payment.date | date }}</td>
+                <td>£ {{ payment.amount | number : 2 }}</td>
+                <td><button ng-click="delete(payment,'payments')">X</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div ng-show="view == 'interest'" class="view interest">
+          <form name="rate_form" ng-submit="setRate()">
+            <label for="amount">New Base Rate (%)</label>
+            <input type="number" value="0.00" step="0.01" required name="rate" ng-model="rate">
+            <label for="date">Date</label>
+            <input type="date" required name="date" ng-model="date">
+            <input type="submit" value="Submit" ng-disabled="form_loading">
+          </form>
+          <table width="100%">
+            <thead>
+              <th>-</th>
+              <th>Date</th>
+              <th>Rate (Base + 4%)</th>
+              <th></th>
+            </thead>
+            <tbody>
+              <tr ng-repeat="rate in rates">
+                <td>{{ $index+1 }}</td>
+                <td>{{ rate.date | date }}</td>
+                <td>{{ rate.rate | number:2 }}%</td>
+                <td><button ng-click="delete(rate,'rates')">X</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div ng-show="view == 'print'" class="view print">
+
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
