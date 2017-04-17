@@ -44,13 +44,14 @@
             <input type="date" required name="date" ng-model="date">
             <input type="submit" value="Submit" ng-disabled="form_loading">
           </form>
-          <table width="100%">
+          <table>
             <thead>
-              <th>-</th>
+              <th>no.</th>
               <th>Reason</th>
               <th>Date</th>
               <th>Interest Rate</th>
               <th>Amount</th>
+              <th></th>
             </thead>
             <tbody>
               <tr ng-repeat="charge in charges | orderBy : date : false">
@@ -73,9 +74,9 @@
             <input type="date" required name="date" ng-model="date">
             <input type="submit" value="Submit" ng-disabled="form_loading">
           </form>
-          <table width="100%">
+          <table>
             <thead>
-              <th>-</th>
+              <th>no.</th>
               <th>Date</th>
               <th>Amount</th>
               <th></th>
@@ -99,9 +100,9 @@
             <input type="date" required name="date" ng-model="date">
             <input type="submit" value="Submit" ng-disabled="form_loading">
           </form>
-          <table width="100%">
+          <table>
             <thead>
-              <th>-</th>
+              <th>no.</th>
               <th>Date</th>
               <th>Rate (Base + 4%)</th>
               <th></th>
@@ -119,7 +120,7 @@
         <div ng-show="view == 'print'" class="view print">
           <table>
             <thead>
-              <th>-</th>
+              <th>no.</th>
               <th>Type</th>
               <th>Description</th>
               <th>Date(s)</th>

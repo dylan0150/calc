@@ -107,6 +107,13 @@ app.controller('mainCtrl', function($scope, $http, $filter){
         row.balance = balance += row.amount
         if (row.from != undefined) {
           row.desc = "Interest charges from "+$filter('date')(row.from)+" to "+$filter('date')(row.date)+" @"+row.rate+"%"
+          row.type = "Interest"
+        } else if (row.reason != undefined) {
+          row.desc = row.reason
+          row.type = "Charge"
+        } else {
+          row.desc = "Payment recieved on "+$filter('date')(row.date)
+          row.type = "Payment"
         }
       }
     }).then(load).then(function(response) {

@@ -16,3 +16,30 @@ div.form-loader {
   vertical-align: middle;
   background-color: rgba(255,0,0,0.25);
 }
+
+table {
+  border-radius: 15px;
+  border-top: 2px solid black;
+  border-bottom: 2px solid black;
+  margin: 0 auto;
+  margin-top: 15px;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+td {
+  border-top: 1px solid black;
+  padding: 2px;
+}
+
+tr:hover {
+  background-color: #eee
+}
+
+
+th {
+  padding: 2px;
+  padding-bottom: 20px;
+  padding-top: 20px;
+  text-align: left;
+}
