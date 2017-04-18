@@ -5,7 +5,7 @@
     <link rel="stylesheet" href="style.css">
     <script src="lib/angular.min.js" charset="utf-8"></script>
     <script src="script.js" charset="utf-8"></script>
-    <title>Date Calculator</title>
+    <title>Finance Calculations</title>
   </head>
   <body ng-app="app">
     <div class="main" ng-controller="mainCtrl">
@@ -26,7 +26,7 @@
           <button ng-class="check('interest')" ng-click="view ='interest'">Change Interest</button>
           <button ng-class="check('charge')" ng-click="view ='charge'">Add a Charge</button>
         </div>
-
+        <h2>Summary</h2>
         <div class="view info">
           <p>The next payment is due on {{ info.next_date | date }} for an amount of £{{info.next_amount | number : 2}}</p>
           <p>The total amount remaining to pay off is £{{info.current_total | number : 2}}, this includes a final charge for interest up to and including {{ today | date }}</p>
@@ -131,9 +131,10 @@
           </table>
         </div>
         <div ng-show="view == 'print'" class="view print">
+          <h2>Balance Changes</h2>
           <table>
             <thead>
-              <th>no.</th>
+              <th class="no-print">no.</th>
               <th>Type</th>
               <th>Description</th>
               <th>Date</th>
@@ -142,7 +143,7 @@
             </thead>
             <tbody>
               <tr ng-repeat="row in print_table">
-                <td>{{ $index+1 }}</td>
+                <td class="no-print">{{ $index+1 }}</td>
                 <td>{{ row.type }}</td>
                 <td>{{ row.desc }}</td>
                 <td>{{ row.date | date }}</td>

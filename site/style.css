@@ -118,3 +118,21 @@ label {
   background-color: #eee;
   width: 95%;
 }
+
+@media only print {
+  .controls {
+    display: none;
+  }
+  table {
+    margin-top: 0;
+  }
+  .no-print {
+    display: none;
+  }
+}
+
+@media not print {
+  h2 {
+    display: none;
+  }
+}
