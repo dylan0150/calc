@@ -1,19 +1,22 @@
+//PACKAGES
 var express     = require('express')
 var bodyParser  = require('body-parser')
 var fs          = require('fs')
 var uuid        = require('node-uuid')
 
+//VARIABLES
 var path = process.argv[1].split('index.js')[0]
-
 var json = {}
 var load = function() {
   json = JSON.parse(fs.readFileSync(path + 'data.json'))
+  calculate()
 }
 var save = function() {
   calculate()
   fs.writeFileSync(path + 'data.json',JSON.stringify(json))
 }
 
+//CLASSES
 var Charge = function(date, amount, reason, rate) {
   this.id = uuid.v1()
   this.reason = reason
@@ -24,7 +27,6 @@ var Charge = function(date, amount, reason, rate) {
   json.charges.push(this)
   save()
 }
-
 var Payment = function(date, amount) {
   this.id = uuid.v1()
   this.date = date
@@ -33,7 +35,6 @@ var Payment = function(date, amount) {
   json.payments.push(this)
   save()
 }
-
 var Rate = function(date, rate) {
   this.id = uuid.v1()
   this.date = date
@@ -43,47 +44,19 @@ var Rate = function(date, rate) {
   save()
 }
 
+//CALCULTIONS
 var calculate = function(){
-  load()
-  var current_total   = 0
-  var total_interest  = 0
   var interest_charges = []
-  var payments = json.payments
-  for (var i = 0; i < payments.length; i++) {
-    payments[i].amount = -payments[i].amount
-  }
-  var changes = [].concat(json.charges,payments)
+  var changes = [].concat(json.charges,json.payments)
   dateSort(changes)
-  var total = changes[0].amount
-  for (var j = 1; j < changes.length; j++) {
-    var c1 = changes[j-1]
-    var c2 = changes[j]
-    c1.date = new Date(c1.date)
-    c2.date = new Date(c2.date)
-    var rate = {}
-    var rd = new Date(1971,1,1)
-    for (var i = 0; i < json.rates.length; i++) {
-      var r = json.rates[i]
-      r.date = new Date(r.date)
-      if (r.date.getTime() <= c2.date.getTime() && r.date.getTime() >= rd.getTime()) {
-        rate = r
-      }
-    }
-    if (c2.date.getTime() > rate.date.getTime()) {
-      if (c2.date.getYear() % 4 == 0) { var len = 366 } else { var len = 365 }
-      if (c1.date.getTime() <= rate.date.getTime()) {
-        var diff = Math.round((c2.date.getTime() - rate.date.getTime()) / ( 1000*3600*24 ))
-      } else {
-        var diff = Math.round((c2.date.getTime() - c1.date.getTime()) / ( 1000*3600*24 ))
-      }
-      var payment = Math.round( ((diff/len) * (rate.rate/100) * total) * 100 ) / 100
-      interest_charges.push( { amount:payment, date:c2.date.toString(), rate:rate.rate, days:Math.round(diff), from:c1.date.toString() } )
-      total_interest += payment
-      total += Math.round(payment)
-      total += Math.round(c2.amount)
-    }
-  }
+  var pc = processChanges(changes, json.rates)
+  var total = pc.total
+  var interest_charges = pc.interest_charges
+  var changes = pc.changes
   var now = new Date(Date.now())
+  var completion_date = new Date(2018,8,25)
+  var last_date = new Date( interest_charges[ interest_charges.length - 1 ].date )
+  var current_total = total + calcTotalInterest( last_date, now, total )
   var y = now.getYear() + 1900
   var m = now.getMonth()
   var d = now.getDay()
@@ -95,17 +68,11 @@ var calculate = function(){
     }
   }
   var next_date = new Date(y,m,25)
-  var completion_date = new Date(2018,8,25)
-  var last_date = new Date( interest_charges[ interest_charges.length - 1 ].date )
-  if ( now.getYear() % 4 == 0 ) { var len = 365 } else { var len = 366 }
-  var diff = Math.round(( now.getTime() - last_date.getTime()) / ( 1000*3600*24 ))
-  var payment = Math.round( ((diff/len) * (4.5/100) * total) * 100 ) / 100
-  var current_total = total + payment
+  total += calcTotalInterest( last_date, next_date, total )
   var next_amount = calcPayment(next_date, last_date, completion_date, total)
   var n = ((completion_date.getMonth()-next_date.getMonth())+((completion_date.getYear()-next_date.getYear())*12))+1
   var abs_total = ( next_amount * n )
   var total_interest = ( abs_total - total )
-  load()
   json.changes = changes
   json.interest_charges = interest_charges
   json.info = {
@@ -117,7 +84,67 @@ var calculate = function(){
     completion_date: completion_date.toString()
   }
 }
-
+var processChanges = function(changes, rates) {
+  var total = changes[0].amount
+  var interest_charges = []
+  var payment = 0
+  for (var j = 1; j < changes.length; j++) {
+    var c1 = changes[j-1]
+    var c2 = changes[j]
+    c1.date = new Date(c1.date)
+    c2.date = new Date(c2.date)
+    var rate = getRates( rates, c1.date, c2.date )
+    if (rate.intermediates.length > 0) {
+      rate.intermediates = dateSort( rate.intermediates )
+      for (var i = 0; i < rate.intermediates.length; i++) {
+        var r = rate.intermediates[i].rate
+        if ( i == 0 ) {
+          var d1 = new Date( c1.date )
+          var d2 = new Date( rate.intermediates[i].date )
+          payment = calcInterest( r, total, d1, d2 )
+          interest_charges.push( { amount:payment.amount, date:d2.toString(), rate:rate.rate.rate, days:Math.round(payment.days), from:d1.toString() } )
+          total += payment.amount
+        }
+        if ( i == rate.intermediates.length - 1 ) {
+          var d1 = new Date( rate.intermediates[i].date )
+          var d2 = new Date( c2.date )
+        } else {
+          var d1 = new Date( rate.intermediates[i].date )
+          var d2 = new Date( rate.intermediates[i+1].date )
+        }
+        payment = calcInterest( r, total, d1, d2 )
+        interest_charges.push( { amount:payment.amount, date:d2.toString(), rate:r, days:Math.round(payment.days), from:d1.toString() } )
+        total += payment.amount
+      }
+    } else {
+      payment = calcInterest( rate.rate.rate, total, c1.date, c2.date )
+      total += payment.amount
+      interest_charges.push( { amount:payment.amount, date:c2.date.toString(), rate:rate.rate.rate, days:Math.round(payment.days), from:c1.date.toString() } )
+    }
+    if (changes[j].reason == undefined) { total -= c2.amount } else { total += c2.amount }
+  }
+  return { total, changes, interest_charges }
+}
+var getRates = function(rates, d1, d2) {
+  var rd = new Date(1971,1,1)
+  var res = {
+    rate:0,
+    intermediates:[]
+  }
+  for (var i = 0; i < rates.length; i++) {
+    var r = rates[i]
+    r.date = new Date(r.date)
+    if (r.date.getTime() <= d2.getTime()) {
+      if (r.date.getTime() >= d1.getTime()) {
+        res.intermediates.push(r)
+      } else if (r.date.getTime() >= rd.getTime() && r.date.getTime() <= d1.getTime()) {
+        rd = r.date
+        res.rate = r
+      }
+    }
+  }
+  return res
+}
 var dateSort = function(array) {
   var sorted = true
   var swap = function(arr,i1,i2) {
@@ -137,38 +164,73 @@ var dateSort = function(array) {
   pass(array)
   return array
 }
-
-var calcPayment = function(next_date, last_date, completion_date, total) {
-  if ( next_date.getYear() % 4 == 0 ) { var len = 365 } else { var len = 366 }
-  var diff = Math.round(( next_date.getTime() - last_date.getTime()) / ( 1000*3600*24 ))
-  var payment = Math.round( ((diff/len) * (4.5/100) * total) * 100 ) / 100
-  var cr = json.rates[0]
-  var ct = new Date(json.rates[0].date).getTime()
-  for (var i = 0; i < json.rates.length; i++) {
-    var rate = json.rates[i]
-    var t = new Date(rate.date).getTime()
-    if ( t <= next_date.getTime() && t >= ct ) {
-      cr = rate;
-      if ( t > last_date.getTime() ) {
-        for (var j = 0; j < json.rates.length; j++) {
-          var lt = new Date(json.rates[j].date).getTime()
-          if (lt < ct && lt > last_date.getTime()) {
-            var lr = json.rates[j]
-            var rdiff = (lt-last_date.getTime()) / (next_date.getTime() - last_date.getTime())
-          }
-        }
-        cr.rate = (cr.rate*(1-rdiff)) + (lr*rdiff)
+var calcTotalInterest = function(d1, d2, total) {
+  var rate = getRates( dateSort(json.rates), d1, d2 )
+  var ti = 0
+  if (rate.intermediates.length > 0) {
+    rate.intermediates = dateSort(rate.intermediates)
+    for (var i = 0; i < rate.intermediates.length; i++) {
+      var r = rate.intermediates[i].rate
+      if ( i == 0 ) {
+        var _d1 = new Date( d1 )
+        var _d2 = new Date( rate.intermediates[i].date )
+        var t = calcInterest( r, total, _d1, _d2 ).amount
+        ti += t; total += t;
       }
+      if ( i == rate.intermediates.length - 1 ) {
+        var _d1 = new Date( rate.intermediates[i].date )
+        var _d2 = new Date( d2 )
+      } else {
+        var _d1 = new Date( rate.intermediates[i].date )
+        var _d2 = new Date( rate.intermediates[i+1].date )
+      }
+      var t = calcInterest( r, total, _d1, _d2 ).amount
+      ti += t; total += t;
     }
+  } else {
+    var t = calcInterest( rate.rate.rate, total, d1, d2 ).amount
+    ti += t; total += t;
+  }
+  return ti
+}
+var calcInterest = function(r, t, d1, d2) {
+  var d = Math.round((d2.getTime() - d1.getTime()) / ( 1000*3600*24 ))
+  var l = 365; if (d2.getYear() % 4 == 0) l = 366;
+  return { amount:Math.round( ( (d/l) * (r/100) * t ) * 100 ) / 100, days: d }
+}
+var calcPayment = function(next_date, last_date, completion_date, total) {
+  var p = total + calcTotalInterest( last_date, next_date, total )
+  var rate = getRates( dateSort(json.rates), next_date, completion_date )
+  var yr = rate.rate.rate
+  var max = completion_date.getTime() - next_date.getTime()
+  if (rate.intermediates.length > 0) {
+    var tr = 0
+    for (var i = 0; i < rate.intermediates.length; i++) {
+      if ( i == 0) {
+        var d1 = next_date
+        var d2 = rate.intermediates[i].date
+        var dr = yr
+      } else if ( i == rate.intermediates.length-1) {
+        var d1 = rate.intermediates[i].date
+        var d2 = completion_date
+        var dr = rate.intermediates[i].rate
+      } else {
+        var d1 = rate.intermediates[i-1].date
+        var d2 = rate.intermediates[i].date
+        var dr = rate.intermediates[i-1].rate
+      }
+      var diff = d2.getTime() - d1.getTime()
+      tr += (diff / max) * dr
+    }
+    yr = tr
   }
   var n = ((completion_date.getMonth()-next_date.getMonth())+((completion_date.getYear()-next_date.getYear())*12))+1
-  var r = ( cr.rate/100 )/12
-  var p = total + payment
+  var r = ( yr/100 )/12
   return p * ( (r * (Math.pow(1+r,n)) ) / ( (Math.pow(1+r,n)) - 1 ) )
 }
 
+//SERVER
 var app = express()
-
 app.use(express.static('site'))
 app.use(bodyParser())
 app.use(function(request,response,next) {
@@ -178,7 +240,7 @@ app.use(function(request,response,next) {
     var params_str = request.url.split('?')
     if (params_str.length > 1) {
       try {
-        var params = params_str.split('&')
+        var params = params_str[1].split('&')
         for (var i = 0; i < params.length; i++) {
           var param = params[i].split('=')
           obj[param[0]] = param[1]
@@ -191,18 +253,16 @@ app.use(function(request,response,next) {
   } catch (e) {
     console.error(new Error(e).stack)
   }
-  request.params = obj
+  request.urlparams = obj
   load()
   next()
 })
-
 app.post('/delete*', function(request,response) {
-  if (request.params.id == undefined || request.params.tbl == undefined) {
+  if (request.urlparams.id == undefined || request.urlparams.tbl == undefined) {
     response.status(200).send({ok:false}).end()
   } else {
-    var id = request.params.id
-    var tbl = request.params.tbl
-    load()
+    var id = request.urlparams.id
+    var tbl = request.urlparams.tbl
     for (var i = json[tbl].length-1; i >= 0; i--) {
       if (json[tbl][i].id == id) {
         json[tbl].splice(i,1)
@@ -216,15 +276,13 @@ app.post('/payment*', function(request,response) {
   var date = request.body.date
   var amount = request.body.amount
   new Payment(new Date(date).toString(), amount)
-  var data = { ok:true }
-  response.status(200).send(data).end()
+  response.status(200).send({ok:true}).end()
 })
 app.post('/rate*', function(request,response) {
   var date = new Date(request.body.date)
   var rate = request.body.rate
   new Rate(date.toString(), rate)
-  var data = { ok:true }
-  response.status(200).send(data).end()
+  response.status(200).send({ok:true}).end()
 })
 app.post('/charge*', function(request,response) {
   var date = new Date(request.body.date)
@@ -236,21 +294,17 @@ app.post('/charge*', function(request,response) {
     var d = new Date(json.rates[i].date).getTime()
     if (d >= rd && d <= date.getTime()) {
       rate = json.rates[i].rate
+      rd = new Date(json.rates[i].date)
     }
   }
   new Charge(date.toString(), amount, reason, rate)
-  var data = { ok:true }
-  response.status(200).send(data).end()
+  response.status(200).send({ok:true}).end()
 })
 app.get('/print*', function(request,response) {
-  load()
-  calculate()
   var res = dateSort([].concat(json.interest_charges, json.changes))
   response.status(200).send(res).end()
 })
 app.get('/load*', function(request,response) {
-  load()
-  calculate()
   response.status(200).send(json).end()
 })
 

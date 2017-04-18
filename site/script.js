@@ -5,8 +5,12 @@ app.controller('mainCtrl', function($scope, $http, $filter){
   var host = 'http://localhost:8080'
 
   $scope.loading = true
+  $scope.today = new Date(Date.now())
+  $scope.view = 'print'
 
-  $scope.view = 'info'
+  $scope.check = function(n) {
+    if ($scope.view == n) return 'selected'
+  }
 
   var parseDates = function(obj) {
     if (Array.isArray(obj)) {
@@ -37,9 +41,6 @@ app.controller('mainCtrl', function($scope, $http, $filter){
       return response.data
     })
   }
-  load().then(function(response) {
-    $scope.loading = false
-  })
 
   $scope.delete = function(item,tbl) {
     $scope.form_loading = true
@@ -104,21 +105,27 @@ app.controller('mainCtrl', function($scope, $http, $filter){
       var balance = 0
       for (var i = 0; i < $scope.print_table.length; i++) {
         var row = $scope.print_table[i]
-        row.balance = balance += row.amount
         if (row.from != undefined) {
-          row.desc = "Interest charges from "+$filter('date')(row.from)+" to "+$filter('date')(row.date)+" @"+row.rate+"%"
+          row.desc = "Interest charges from "+$filter('date')(row.from)+" to "+$filter('date')(row.date)+" -- "+row.days+"days@"+$filter('number')(row.rate,2)+"%"
           row.type = "Interest"
         } else if (row.reason != undefined) {
           row.desc = row.reason
           row.type = "Charge"
         } else {
+          row.amount = -row.amount
           row.desc = "Payment recieved on "+$filter('date')(row.date)
           row.type = "Payment"
         }
+        row.balance = balance += row.amount
       }
     }).then(load).then(function(response) {
       $scope.form_loading = false
       $scope.view = 'print'
     })
   }
+
+  load().then(function(response) {
+    $scope.loading = false
+    $scope.print()
+  })
 })
