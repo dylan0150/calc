@@ -113,7 +113,7 @@ app.controller('mainCtrl', function($scope, $http, $filter){
           row.type = "Charge"
         } else {
           row.amount = -row.amount
-          row.desc = "Payment recieved on "+$filter('date')(row.date)
+          row.desc = "Payment received on "+$filter('date')(row.date)
           row.type = "Payment"
         }
         row.balance = balance += row.amount
