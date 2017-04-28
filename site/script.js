@@ -37,7 +37,6 @@ app.controller('mainCtrl', function($scope, $http, $filter){
       for (var key in response.data) {
         $scope[key] = response.data[key]
       }
-      console.log(response)
       return response.data
     })
   }
