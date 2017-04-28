@@ -59,7 +59,7 @@ var calculate = function(){
   var current_total = total + calcTotalInterest( last_date, now, total )
   var y = now.getYear() + 1900
   var m = now.getMonth()
-  var d = now.getDay()
+  var d = now.getDate()
   if ( d > 25 ) {
     if ( m == 11) {
       m = 0; y++
