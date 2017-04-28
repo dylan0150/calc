@@ -30,7 +30,7 @@
         <div class="view info">
           <p>The next payment is due on {{ info.next_date | date }} for an amount of £{{info.next_amount | number : 2}}</p>
           <p>The total amount remaining to pay off is £{{info.current_total | number : 2}}, this includes a final charge for interest up to and including {{ today | date }}</p>
-          <p>This results in a total payable amount of £{{info.abs_total | number : 2}} assuming a completion date of {{info.completion_date | date}} and a total interest of £{{ info.total_interest | number : 2 }}.</p>
+          <p>This results in a total payable amount of £{{info.abs_total | number : 2}} assuming a completion date of {{info.completion_date | date}} and a total additional interest of £{{ info.total_interest | number : 2 }}.</p>
         </div>
 
         <div ng-show="view == 'charge'" class="view charge">
